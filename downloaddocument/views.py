@@ -1,31 +1,37 @@
 from django.shortcuts import render
 import os
 import mimetypes
+from reportlab.graphics.charts.barcharts import VerticalBarChart
 import os
+import matplotlib.pyplot as plt
 from django.http.response import HttpResponse
-from .models import Potholedata
+from .models import Potholedata,Pothole_density
 from django.shortcuts import render
 import io
 from django.http import FileResponse
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Table
 from reportlab.graphics.shapes import Drawing
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.graphics.charts.piecharts import Pie
+from reportlab.lib.enums import TA_JUSTIFY
+from reportlab.lib.pagesizes import letter
 
 def home(request):
     return render(request,'home.html')
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle,Image
 from reportlab.lib.pagesizes import letter, inch
 
 def download_file(request):
-    file_name = "simple_table.pdf"
+    file_name = "Report.pdf"
     doc = SimpleDocTemplate(file_name, pagesize=letter)
     # container for the 'Flowable' objects
     elements = []
     m = Potholedata.objects.get(id=1)
+    # table
     data= [['Data',''],
         ['Address',m.Address ],
     ['Road_condition',m.Road_condition ],
@@ -46,20 +52,37 @@ def download_file(request):
     ('BOX', (0,0), (-1,-1), 0.25, colors.black),
     ]))
     elements.append(t)
+    # pie chart
+    d = Drawing(350, 340)
+    pc = Pie()
+    pc.x = 100
+    pc.y = 100
+    pc.width = 200
+    pc.height = 200
+    pc.data = [m.pothole,m.cracks,m.patches]
+    pc.labels = ['pothole','cracks','patches']
+    d.add(pc)
+    elements.append(d)
+    # bar graph
+    dobj = Pothole_density.objects.get(id =1)
+    potholes = ['0-500', '500-1000', '1000-1500',
+                                    '1500-2000', '2000-2500']
+    km_covered = [dobj.p500,dobj.p1000,dobj.p1500,dobj.p2000,dobj.p2500]
+
+    # colour = ['green', 'blue', 'purple', 'brown', 'teal']
+    plt.bar(potholes, km_covered)
+    plt.title('Pothole/Patch density in 500 meters', fontsize=14)
+    plt.xlabel('km Covered', fontsize=14)
+    plt.ylabel('no. of potholes', fontsize=14)
+    plt.savefig('my_plot.png')
+    elements.append(Image('my_plot.png',300,300))
     doc.build(elements)
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     print(BASE_DIR)
     # Define the full file path
-    filepath = os.path.join(BASE_DIR + '\simple_table.pdf')
+    filepath = os.path.join(BASE_DIR + '\Report.pdf')
     print(filepath)
-    d = Drawing(800,800)
-    pc = Pie()
-    pc.x = 120
-    pc.y = 300
-    pc.height = 400
-    pc.width = 400
-    pc.data = [10,20,30]
-    pc.labels = ['a','b','c']
+    # d.save(formats=[filepath], outDir='.', fnRoot='test-pie')
     path = open(filepath, 'r')
     # Set the mime type
     mime_type, _ = mimetypes.guess_type(filepath)
@@ -69,4 +92,6 @@ def download_file(request):
     response['Content-Disposition'] = "attachment; filename=%s" % file_name
     # Return the response value
     return response
+    
+
 

@@ -14,3 +14,11 @@ class Potholedata(models.Model):
     pothole = models.IntegerField()
     cracks = models.IntegerField()
     patches = models.IntegerField()
+
+class Pothole_density(models.Model):
+    data = models.ForeignKey(Potholedata,on_delete=models.CASCADE)
+    p500 = models.IntegerField()
+    p1000 = models.IntegerField()
+    p1500 = models.IntegerField()
+    p2000 = models.IntegerField()
+    p2500 = models.IntegerField()
